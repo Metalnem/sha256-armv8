@@ -43,173 +43,188 @@ namespace Intrinsics
 
 		public static void Main(string[] args)
 		{
-			var data = new byte[64];
-			data[0] = 0x80;
+			var data = new byte[100 * 1024 * 1024];
+			var padding = new byte[64];
+
+			padding[0] = 0x80;
+			BinaryPrimitives.WriteUInt64BigEndian(padding.AsSpan().Slice(56), (ulong)data.Length * 8);
+
+			var state = h.AsSpan().ToArray();
+
+			Block(state, data);
+			Block(state, padding);
+
+			for (int i = 0; i < state.Length; ++i)
+			{
+				state[i] = BinaryPrimitives.ReverseEndianness(state[i]);
+			}
+
+			// 20492a4d0d84f8beb1767f6616229f85d44c2827b64bdbfb260ee12fa1109e0e
+			var hash = MemoryMarshal.Cast<uint, byte>(state).ToArray();
+
+			Console.WriteLine(BitConverter.ToString(hash).Replace("-", String.Empty).ToLower());
+		}
+
+		private static void Block(uint[] state, ReadOnlySpan<byte> data)
+		{
 			var msg = new byte[64];
 
 			// Load state
-			var state0 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref h[0]));
-			var state1 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref h[4]));
+			var state0 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref state[0]));
+			var state1 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref state[4]));
 
-			// Save state
-			var abef_save = state0;
-			var cdgh_save = state1;
-
-			var from = MemoryMarshal.Cast<byte, uint>(data);
-			var to = MemoryMarshal.Cast<byte, uint>(msg);
-
-			// Reverse for little endian
-			for (int i = 0; i < 16; ++i)
+			while (data.Length >= 64)
 			{
-				to[i] = BinaryPrimitives.ReverseEndianness(from[i]);
+				// Save state
+				var abef_save = state0;
+				var cdgh_save = state1;
+
+				var from = MemoryMarshal.Cast<byte, uint>(data);
+				var to = MemoryMarshal.Cast<byte, uint>(msg);
+
+				// Reverse for little endian
+				for (int i = 0; i < 16; ++i)
+				{
+					to[i] = BinaryPrimitives.ReverseEndianness(from[i]);
+				}
+
+				// Load message
+				var msg0 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[0]);
+				var msg1 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[16]);
+				var msg2 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[32]);
+				var msg3 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[48]);
+
+				Vector128<uint> tmp0, tmp1, tmp2;
+				tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x00])));
+
+				// Rounds 0-3
+				msg0 = Sha256.SchedulePart1(msg0, msg1);
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x04])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+				msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
+
+				// Rounds 4-7
+				msg1 = Sha256.SchedulePart1(msg1, msg2);
+				tmp2 = state0;
+				tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x08])));
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+				msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
+
+				// Rounds 8-11
+				msg2 = Sha256.SchedulePart1(msg2, msg3);
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x0c])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+				msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
+
+				// Rounds 12-15
+				msg3 = Sha256.SchedulePart1(msg3, msg0);
+				tmp2 = state0;
+				tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x10])));
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+				msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
+
+				// Rounds 16-19
+				msg0 = Sha256.SchedulePart1(msg0, msg1);
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x14])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+				msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
+
+				// Rounds 20-23
+				msg1 = Sha256.SchedulePart1(msg1, msg2);
+				tmp2 = state0;
+				tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x18])));
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+				msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
+
+				// Rounds 24-27
+				msg2 = Sha256.SchedulePart1(msg2, msg3);
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x1c])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+				msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
+
+				// Rounds 28-31
+				msg3 = Sha256.SchedulePart1(msg3, msg0);
+				tmp2 = state0;
+				tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x20])));
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+				msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
+
+				// Rounds 32-35
+				msg0 = Sha256.SchedulePart1(msg0, msg1);
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x24])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+				msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
+
+				// Rounds 36-39
+				msg1 = Sha256.SchedulePart1(msg1, msg2);
+				tmp2 = state0;
+				tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x28])));
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+				msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
+
+				// Rounds 40-43
+				msg2 = Sha256.SchedulePart1(msg2, msg3);
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x2c])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+				msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
+
+				// Rounds 44-47
+				msg3 = Sha256.SchedulePart1(msg3, msg0);
+				tmp2 = state0;
+				tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x30])));
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+				msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
+
+				// Rounds 48-51
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x34])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+
+				// Rounds 52-55
+				tmp2 = state0;
+				tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x38])));
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+
+				// Rounds 56-59
+				tmp2 = state0;
+				tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x3c])));
+				state0 = Sha256.HashLower(state0, state1, tmp0);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp0);
+
+				// Rounds 60-63
+				tmp2 = state0;
+				state0 = Sha256.HashLower(state0, state1, tmp1);
+				state1 = Sha256.HashUpper(state1, tmp2, tmp1);
+
+				// Combine state
+				state0 = Simd.Add(state0, abef_save);
+				state1 = Simd.Add(state1, cdgh_save);
+
+				data = data.Slice(64);
 			}
 
-			// Load message
-			var msg0 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[0]);
-			var msg1 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[16]);
-			var msg2 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[32]);
-			var msg3 = Unsafe.ReadUnaligned<Vector128<uint>>(ref msg[48]);
-
-			Vector128<uint> tmp0, tmp1, tmp2;
-			tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x00])));
-
-			// Rounds 0-3
-			msg0 = Sha256.SchedulePart1(msg0, msg1);
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x04])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-			msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
-
-			// Rounds 4-7
-			msg1 = Sha256.SchedulePart1(msg1, msg2);
-			tmp2 = state0;
-			tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x08])));
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-			msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
-
-			// Rounds 8-11
-			msg2 = Sha256.SchedulePart1(msg2, msg3);
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x0c])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-			msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
-
-			// Rounds 12-15
-			msg3 = Sha256.SchedulePart1(msg3, msg0);
-			tmp2 = state0;
-			tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x10])));
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-			msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
-
-			// Rounds 16-19
-			msg0 = Sha256.SchedulePart1(msg0, msg1);
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x14])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-			msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
-
-			// Rounds 20-23
-			msg1 = Sha256.SchedulePart1(msg1, msg2);
-			tmp2 = state0;
-			tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x18])));
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-			msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
-
-			// Rounds 24-27
-			msg2 = Sha256.SchedulePart1(msg2, msg3);
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x1c])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-			msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
-
-			// Rounds 28-31
-			msg3 = Sha256.SchedulePart1(msg3, msg0);
-			tmp2 = state0;
-			tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x20])));
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-			msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
-
-			// Rounds 32-35
-			msg0 = Sha256.SchedulePart1(msg0, msg1);
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x24])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-			msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
-
-			// Rounds 36-39
-			msg1 = Sha256.SchedulePart1(msg1, msg2);
-			tmp2 = state0;
-			tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x28])));
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-			msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
-
-			// Rounds 40-43
-			msg2 = Sha256.SchedulePart1(msg2, msg3);
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x2c])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-			msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
-
-			// Rounds 44-47
-			msg3 = Sha256.SchedulePart1(msg3, msg0);
-			tmp2 = state0;
-			tmp0 = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x30])));
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-			msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
-
-			// Rounds 48-51
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x34])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-
-			// Rounds 52-55
-			tmp2 = state0;
-			tmp0 = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x38])));
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-
-			// Rounds 56-59
-			tmp2 = state0;
-			tmp1 = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x3c])));
-			state0 = Sha256.HashLower(state0, state1, tmp0);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp0);
-
-			// Rounds 60-63
-			tmp2 = state0;
-			state0 = Sha256.HashLower(state0, state1, tmp1);
-			state1 = Sha256.HashUpper(state1, tmp2, tmp1);
-
-			// Combine state
-			state0 = Simd.Add(state0, abef_save);
-			state1 = Simd.Add(state1, cdgh_save);
-
-			byte[] hash = new byte[32];
-
-			Unsafe.WriteUnaligned(ref hash[0], state0);
-			Unsafe.WriteUnaligned(ref hash[16], state1);
-
-			from = MemoryMarshal.Cast<byte, uint>(hash);
-			to = MemoryMarshal.Cast<byte, uint>(hash);
-
-			for (int i = 0; i < from.Length; ++i)
-			{
-				to[i] = BinaryPrimitives.ReverseEndianness(to[i]);
-			}
-
-			Console.WriteLine(BitConverter.ToString(hash).Replace("-", String.Empty).ToLower());
+			Unsafe.WriteUnaligned(ref Unsafe.As<uint, byte>(ref state[0]), state0);
+			Unsafe.WriteUnaligned(ref Unsafe.As<uint, byte>(ref state[4]), state1);
 		}
 	}
 }

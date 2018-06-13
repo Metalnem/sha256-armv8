@@ -69,6 +69,23 @@ namespace Intrinsics
 			var hash_abcd = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref state[0]));
 			var hash_efgh = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref state[4]));
 
+			var k0 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x00]));
+			var k1 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x04]));
+			var k2 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x08]));
+			var k3 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x0c]));
+			var k4 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x10]));
+			var k5 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x14]));
+			var k6 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x18]));
+			var k7 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x1c]));
+			var k8 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x20]));
+			var k9 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x24]));
+			var k10 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x28]));
+			var k11 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x2c]));
+			var k12 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x30]));
+			var k13 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x34]));
+			var k14 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x38]));
+			var k15 = Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x3c]));
+
 			while (data.Length >= 64)
 			{
 				// Save state
@@ -93,7 +110,7 @@ namespace Intrinsics
 				Vector128<uint> wk, temp_abcd;
 
 				// Rounds 0-3
-				wk = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x00])));
+				wk = Simd.Add(msg0, k0);
 				msg0 = Sha256.SchedulePart1(msg0, msg1);
 				msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
 				temp_abcd = hash_abcd;
@@ -101,7 +118,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 4-7
-				wk = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x04])));
+				wk = Simd.Add(msg1, k1);
 				msg1 = Sha256.SchedulePart1(msg1, msg2);
 				msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
 				temp_abcd = hash_abcd;
@@ -109,7 +126,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 8-11
-				wk = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x08])));
+				wk = Simd.Add(msg2, k2);
 				msg2 = Sha256.SchedulePart1(msg2, msg3);
 				msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
 				temp_abcd = hash_abcd;
@@ -117,7 +134,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 12-15
-				wk = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x0c])));
+				wk = Simd.Add(msg3, k3);
 				msg3 = Sha256.SchedulePart1(msg3, msg0);
 				msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
 				temp_abcd = hash_abcd;
@@ -125,7 +142,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 16-19
-				wk = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x10])));
+				wk = Simd.Add(msg0, k4);
 				msg0 = Sha256.SchedulePart1(msg0, msg1);
 				msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
 				temp_abcd = hash_abcd;
@@ -133,7 +150,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 20-23
-				wk = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x14])));
+				wk = Simd.Add(msg1, k5);
 				msg1 = Sha256.SchedulePart1(msg1, msg2);
 				msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
 				temp_abcd = hash_abcd;
@@ -141,7 +158,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 24-27
-				wk = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x18])));
+				wk = Simd.Add(msg2, k6);
 				msg2 = Sha256.SchedulePart1(msg2, msg3);
 				msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
 				temp_abcd = hash_abcd;
@@ -149,7 +166,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 28-31
-				wk = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x1c])));
+				wk = Simd.Add(msg3, k7);
 				msg3 = Sha256.SchedulePart1(msg3, msg0);
 				msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
 				temp_abcd = hash_abcd;
@@ -157,7 +174,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 32-35
-				wk = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x20])));
+				wk = Simd.Add(msg0, k8);
 				msg0 = Sha256.SchedulePart1(msg0, msg1);
 				msg0 = Sha256.SchedulePart2(msg0, msg2, msg3);
 				temp_abcd = hash_abcd;
@@ -165,7 +182,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 36-39
-				wk = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x24])));
+				wk = Simd.Add(msg1, k9);
 				msg1 = Sha256.SchedulePart1(msg1, msg2);
 				msg1 = Sha256.SchedulePart2(msg1, msg3, msg0);
 				temp_abcd = hash_abcd;
@@ -173,7 +190,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 40-43
-				wk = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x28])));
+				wk = Simd.Add(msg2, k10);
 				msg2 = Sha256.SchedulePart1(msg2, msg3);
 				msg2 = Sha256.SchedulePart2(msg2, msg0, msg1);
 				temp_abcd = hash_abcd;
@@ -181,7 +198,7 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 44-47
-				wk = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x2c])));
+				wk = Simd.Add(msg3, k11);
 				msg3 = Sha256.SchedulePart1(msg3, msg0);
 				msg3 = Sha256.SchedulePart2(msg3, msg1, msg2);
 				temp_abcd = hash_abcd;
@@ -189,25 +206,25 @@ namespace Intrinsics
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 48-51
-				wk = Simd.Add(msg0, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x30])));
+				wk = Simd.Add(msg0, k12);
 				temp_abcd = hash_abcd;
 				hash_abcd = Sha256.HashLower(hash_abcd, hash_efgh, wk);
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 52-55
-				wk = Simd.Add(msg1, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x34])));
+				wk = Simd.Add(msg1, k13);
 				temp_abcd = hash_abcd;
 				hash_abcd = Sha256.HashLower(hash_abcd, hash_efgh, wk);
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 56-59
-				wk = Simd.Add(msg2, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x38])));
+				wk = Simd.Add(msg2, k14);
 				temp_abcd = hash_abcd;
 				hash_abcd = Sha256.HashLower(hash_abcd, hash_efgh, wk);
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
 
 				// Rounds 60-63
-				wk = Simd.Add(msg3, Unsafe.ReadUnaligned<Vector128<uint>>(ref Unsafe.As<uint, byte>(ref k[0x3c])));
+				wk = Simd.Add(msg3, k15);
 				temp_abcd = hash_abcd;
 				hash_abcd = Sha256.HashLower(hash_abcd, hash_efgh, wk);
 				hash_efgh = Sha256.HashUpper(hash_efgh, temp_abcd, wk);
